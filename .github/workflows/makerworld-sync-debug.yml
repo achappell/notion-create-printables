@@ -1,0 +1,73 @@
+name: MakerWorld Notion Sync (Debug)
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Preview only (no writes)"
+        required: false
+        default: true
+        type: boolean
+      verbose:
+        description: "Verbose per-item output"
+        required: false
+        default: true
+        type: boolean
+      likes_url_override:
+        description: "Optional MakerWorld likes URL override for this run"
+        required: false
+        type: string
+      model_id:
+        description: "Optional single MakerWorld model ID to debug (e.g. 2232026)"
+        required: false
+        type: string
+
+jobs:
+  debug-sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+      MAKERWORLD_LIKES_URL: ${{ secrets.MAKERWORLD_LIKES_URL }}
+      MAKERWORLD_COOKIE: ${{ secrets.MAKERWORLD_COOKIE }}
+      MAKERWORLD_CATEGORY: ${{ secrets.MAKERWORLD_CATEGORY }}
+      MATERIAL_PAGE_ID_PLA: ${{ secrets.MATERIAL_PAGE_ID_PLA }}
+      MATERIAL_PAGE_ID_PETG: ${{ secrets.MATERIAL_PAGE_ID_PETG }}
+      MATERIAL_PAGE_ID_ABS: ${{ secrets.MATERIAL_PAGE_ID_ABS }}
+      MATERIAL_PAGE_ID_ASA: ${{ secrets.MATERIAL_PAGE_ID_ASA }}
+      MATERIAL_PAGE_ID_TPU: ${{ secrets.MATERIAL_PAGE_ID_TPU }}
+      MATERIAL_PAGE_ID_PA: ${{ secrets.MATERIAL_PAGE_ID_PA }}
+      MATERIAL_PAGE_ID_PC: ${{ secrets.MATERIAL_PAGE_ID_PC }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Apply optional likes URL override
+        if: ${{ inputs.likes_url_override != '' }}
+        run: echo "MAKERWORLD_LIKES_URL=${{ inputs.likes_url_override }}" >> "$GITHUB_ENV"
+
+      - name: Validate required secrets
+        run: |
+          test -n "$NOTION_TOKEN" || (echo "Missing NOTION_TOKEN secret" && exit 1)
+          if [ -z "${{ inputs.model_id }}" ]; then
+            test -n "$MAKERWORLD_LIKES_URL" || (echo "Missing MAKERWORLD_LIKES_URL secret or override" && exit 1)
+          fi
+
+      - name: Run sync (debug)
+        run: |
+          args=""
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            args="$args --dry-run"
+          fi
+          if [ "${{ inputs.verbose }}" = "true" ]; then
+            args="$args --verbose"
+          fi
+          if [ -n "${{ inputs.model_id }}" ]; then
+            args="$args --model-id ${{ inputs.model_id }}"
+          fi
+          python3 script/makerworld_to_notion.py $args
