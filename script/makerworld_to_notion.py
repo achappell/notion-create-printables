@@ -228,10 +228,11 @@ def parse_profile_details(html: str) -> str:
     layer = re.search(r'(?:Layer\s*Height|layer\s*height)[^\n<]{0,60}(\d(?:\.\d+)?\s*mm)', html)
     material = re.search(r'(?:Material|material)[^\n<]{0,80}(PLA|PETG|ABS|ASA|TPU|PA|PC)', html, re.IGNORECASE)
     if nozzle:
-        nozzle_value = re.sub(r'\\s+', '', nozzle.group(1))
+        nozzle_value = re.sub(r"\s+", "", nozzle.group(1))
         bits.append(f"Nozzle {nozzle_value}")
     if layer:
-        bits.append(f"Layer {re.sub(r'\\s+', '', layer.group(1))}")
+        layer_value = re.sub(r"\s+", "", layer.group(1))
+        bits.append(f"Layer {layer_value}")
     if material:
         material_value = material.group(1).upper()
         bits.append(f"Material {material_value}")
